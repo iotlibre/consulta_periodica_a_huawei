@@ -21,6 +21,12 @@ import paho.mqtt.publish as publish
 import sched, threading
 import logging
 from logging.handlers import RotatingFileHandler
+from datetime import datetime
+from datetime import timedelta
+
+
+
+HToken = ""
 
 ''' Niveles de logging
 Para obtener _TODO_ el detalle: level=logging.INFO
@@ -32,6 +38,7 @@ logging.basicConfig(
         handlers=[RotatingFileHandler('./logs/log_datadis.log', maxBytes=10000000, backupCount=4)],
         format='%(asctime)s %(levelname)s %(message)s',
         datefmt='%m/%d/%Y %I:%M:%S %p')
+        
 
 def mqtt_tx(client,s_value):
     # logging.debug(client + "  " + s_register + "  " + s_value)
@@ -50,8 +57,7 @@ def pedir_nuevo_key():
     # logging.debug('El Key no se ha obtenido en el ultimo periodo. Pedimos un nuevo key')
     huawei_login = parser.get('huawei_server','huawei_login')
     huawei_password = parser.get('huawei_server','huawei_password')
-    ''' Construimos los componentes de la peticion '''
-    urlOpenApiHuawei_login = "https://intl.fusionsolar.huawei.com/thirdData/login";
+    urlOpenApiHuawei_login = "https://intl.fusionsolar.huawei.com/thirdData/login"
     headers = {'content-type': 'application/json'}
     json_req_body = '{"userName":"'+huawei_login+'", "systemCode":"'+huawei_password+'" }';
 
@@ -78,56 +84,42 @@ def pedir_nuevo_key():
 # 
 parser = configparser.ConfigParser()
 parser.read('config_huawei_server.ini')
-pedir_nuevo_key()
+# pedir_nuevo_key()
 logging.debug(HToken)
 
-param_stationCodes = parser.get('huawei_inversor','stationCodes')
-inversorName = parser.get('huawei_inversor','name')
-param_XSRF_TOKEN = HToken
-
-''' Construimos los componentes de la peticion '''
-urlOpenApiHuawei_getDevRealKpi = "https://intl.fusionsolar.huawei.com/thirdData/getStationRealKpi"
-headers = {'content-type': 'application/json', 'XSRF-TOKEN': ''+ param_XSRF_TOKEN + ''}
-
-json_req_body = "{\"stationCodes\" : \""
-json_req_body += param_stationCodes
-json_req_body +="\"}"
-
-# logging.debug("headers:");
-# logging.debug(headers);
-logging.debug("json_req_body:");
-logging.debug(json_req_body);
-
-'''
-try:
-
-    requestResponse = requests.post(urlOpenApiHuawei_getDevRealKpi, data = json_req_body, headers=headers);
-
-    # Obtenemos el codigo del estado devuelto por la peticion
-    requestResponseStatus = requestResponse.status_code
-    #logging.debug("Codigo de la respuesta obtenido:");
-    #logging.debug(requestResponseStatus);
-
-    if requestResponseStatus==200:
-        responseJson = json.loads(requestResponse.text)
-        # logging.debug(responseJson['data'][0]["dataItemMap"])
-        r_value = responseJson['data'][0]["dataItemMap"]['total_power'] # received value
-        logging.debug("totalEnergy: " + str(r_value))
-        mqtt_tx(inversorName,r_value)
+# param_stationCodes = parser.get('huawei_inversor','stationCodes')
+# inversorName = parser.get('huawei_inversor','name')
 
 
 
-except Exception as ex:
-    logging.debug ("-----------");
-    logging.debug ("ERROR: LA EJECUCION NO HA TERMINADO CORRECTAMENTE DEBIDO A UN ERROR");
-    logging.debug (ex);
-    logging.debug ("-----------");
-'''
 def serverReading(tm):
     threading.Timer(tm, serverReading,args=[tm]).start()
     logging.debug("*" * 4 + ' serverReading')
+
+    pedir_nuevo_key()
+
+    global HToken
+
+    ''' Construimos los componentes de la peticion '''
+    param_stationCodes = parser.get('huawei_inversor','stationCodes')
+    inversorName = parser.get('huawei_inversor','name')
+
+    urlOpenApiHuawei_getDevRealKpi = "https://intl.fusionsolar.huawei.com/thirdData/getStationRealKpi"
+    headers = {'content-type': 'application/json', 'XSRF-TOKEN': ''+ HToken + ''}
+
+    json_req_body = "{\"stationCodes\" : \""
+    json_req_body += param_stationCodes
+    json_req_body +="\"}"
+
+    # logging.debug("headers:");
+    # logging.debug(headers);
+    logging.debug("json_req_body:");
+    logging.debug(json_req_body);
+
+
     try:
         ''' Componemos y ejecutamos la peticion '''
+        
         requestResponse = requests.post(urlOpenApiHuawei_getDevRealKpi, data = json_req_body, headers=headers);
         requestResponseStatus = requestResponse.status_code
         #logging.debug("Codigo respuesta: ",requestResponseStatus);
@@ -142,7 +134,7 @@ def serverReading(tm):
         logging.info ("ERROR: LA EJECUCION NO HA TERMINADO CORRECTAMENTE DEBIDO A UN ERROR");
         logging.info (ex);
 
-serverReading(9.0)
+serverReading(20.0)
 
     
 
