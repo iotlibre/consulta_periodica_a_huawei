@@ -1,7 +1,9 @@
 '''
 Version:
+v4
+
+mie 06 sep 2023 07:23:17 CEST
 v2
-mar 05 sep 2023 07:36:47 CEST
 Request cada 5 min
 Funciona pidiendo un nuevo key despues de cada request
 
@@ -39,26 +41,23 @@ Para comprobar el funcionamiento: level=logging.DEBUG
 '''
 logging.basicConfig(
         level=logging.DEBUG,
-        handlers=[RotatingFileHandler('./logs/log_datadis.log', maxBytes=10000000, backupCount=4)],
+        handlers=[RotatingFileHandler('./logs/log_datadis.log', maxBytes=1000000, backupCount=4)],
         format='%(asctime)s %(levelname)s %(message)s',
         datefmt='%m/%d/%Y %I:%M:%S %p')
         
 
 def mqtt_tx(client,s_value):
-    # logging.debug(client + "  " + s_register + "  " + s_value)
+
     mqtt_topic_prefix = parser.get('mqtt_broker','mqtt_topic_prefix')
     mqtt_ip = parser.get('mqtt_broker','mqtt_ip')
     mqtt_login = parser.get('mqtt_broker','mqtt_login')
     mqtt_password = parser.get('mqtt_broker','mqtt_password')
-
     mqtt_auth = { 'username': mqtt_login, 'password': mqtt_password }
-    response = publish.single(mqtt_topic_prefix + "/" + client, s_value, hostname=mqtt_ip, auth=mqtt_auth)
-    # logging.info( mqtt_ip + " -> " + mqtt_topic_prefix + "/" + client + "  " + s_value)
+    publish.single(mqtt_topic_prefix + "/" + client, s_value, hostname=mqtt_ip, auth=mqtt_auth)
     logging.info( mqtt_ip + " -> " + mqtt_topic_prefix + "/"  + client + "  " + str(s_value))
 
 def pedir_nuevo_key():
 
-    # logging.debug('El Key no se ha obtenido en el ultimo periodo. Pedimos un nuevo key')
     huawei_login = parser.get('huawei_server','huawei_login')
     huawei_password = parser.get('huawei_server','huawei_password')
     urlOpenApiHuawei_login = "https://intl.fusionsolar.huawei.com/thirdData/login"
@@ -70,25 +69,23 @@ def pedir_nuevo_key():
     logging.debug("json_req_body:");
     logging.debug(json_req_body);
     
-    ''' Componemos y ejecutamos la peticion '''
     requestResponse = requests.post(urlOpenApiHuawei_login, data = json_req_body, headers=headers);
-
-    # Obtenemos el codigo del estado devuelto por la peticion
     requestResponseStatus = requestResponse.status_code
-    logging.debug("__La respuesta obtenida:")
+
+    logging.debug("__Respuesta de la peticion XSRF-TOKEN:")
     logging.debug(requestResponse)
     global HToken
     HToken = requestResponse.cookies.get("XSRF-TOKEN")
     logging.debug("XSRF-TOKEN:")
     logging.debug(type(HToken))
-    logging.debug(HToken)
+    logging.info(HToken)
 
 def nedNewKey():
     global lastTimeKey
     needed = False
     current = datetime.now()
     treinta = timedelta(minutes = 12)
-    logging.debug("nedNewKey ?")
+    logging.debug("__nedNewKey ?")
     logging.debug(str(current))
     logging.debug(str(lastTimeKey + treinta))
    
@@ -100,42 +97,31 @@ def nedNewKey():
     return needed
         
 
-# 
-parser = configparser.ConfigParser()
-parser.read('config_huawei_server.ini')
-pedir_nuevo_key()
-logging.debug(HToken)
-
-# param_stationCodes = parser.get('huawei_inversor','stationCodes')
-# inversorName = parser.get('huawei_inversor','name')
-
-
-
 def serverReading(tm):
     threading.Timer(tm, serverReading,args=[tm]).start()
-    logging.debug("*" * 4 + ' serverReading')
-
-    # pedir_nuevo_key()
+    logging.debug("_" * 2 + ' serverReading')
 
     global HToken
+    logging.debug(HToken)
 
     ''' Construimos los componentes de la peticion '''
     param_stationCodes = parser.get('huawei_inversor','stationCodes')
     inversorName = parser.get('huawei_inversor','name')
 
-    urlOpenApiHuawei_getDevRealKpi = "https://intl.fusionsolar.huawei.com/thirdData/getStationRealKpi"
-    headers = {'content-type': 'application/json', 'XSRF-TOKEN': ''+ HToken + ''}
-
-    json_req_body = "{\"stationCodes\" : \""
-    json_req_body += param_stationCodes
-    json_req_body +="\"}"
-
-    # logging.debug("headers:");
-    # logging.debug(headers);
-    logging.debug("json_req_body:");
-    logging.debug(json_req_body);
-
     try:
+        urlOpenApiHuawei_getDevRealKpi = "https://intl.fusionsolar.huawei.com/thirdData/getStationRealKpi"
+        headers = {'content-type': 'application/json', 'XSRF-TOKEN': ''+ HToken + ''}
+
+        json_req_body = "{\"stationCodes\" : \""
+        json_req_body += param_stationCodes
+        json_req_body +="\"}"
+
+        # logging.debug("headers:");
+        # logging.debug(headers);
+        logging.debug("json_req_body:");
+        logging.debug(json_req_body);
+
+    
         ''' Componemos y ejecutamos la peticion '''
         
         requestResponse = requests.post(urlOpenApiHuawei_getDevRealKpi, data = json_req_body, headers=headers);
@@ -143,6 +129,7 @@ def serverReading(tm):
         #logging.debug("Codigo respuesta: ",requestResponseStatus);
         if requestResponseStatus==200:
             responseJson = json.loads(requestResponse.text)
+            logging.debug("responseJson:")
             logging.debug(responseJson)
             r_value = responseJson['data'][0]["dataItemMap"]['total_power'] # received value
             logging.info('totalEnergy: ' + str(r_value))
@@ -156,6 +143,10 @@ def serverReading(tm):
     if nedNewKey():
         pedir_nuevo_key()
 
+parser = configparser.ConfigParser()
+parser.read('config_huawei_server.ini')
+pedir_nuevo_key()
+logging.debug(HToken)
 serverReading(300.0)
 
     
