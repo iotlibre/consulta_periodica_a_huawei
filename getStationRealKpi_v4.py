@@ -1,8 +1,9 @@
 '''
 Version:
+mie 06 sep 2023 11:15:02 CEST
 v4
-
-mie 06 sep 2023 07:23:17 CEST
+Consulta con key nuevo cada 30 minutos
+Probado con credenciales erroneas
 v2
 Request cada 5 min
 Funciona pidiendo un nuevo key despues de cada request
@@ -12,7 +13,7 @@ Funciona pidiendo un nuevo key despues de cada request
 = consulta cada 5 min
 = Incluir logs
 = Es necesario pedir un nuevo key?
-=> Asegurarse de que la consulta tiene el formato adecuado
+= Asegurarse de que la consulta tiene el formato adecuado
 => Leer varias estaciones Huawei del .ini
 
 '''
@@ -28,8 +29,6 @@ import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from datetime import timedelta
-
-
 
 HToken = ""
 lastTimeKey = datetime.now()
@@ -47,7 +46,7 @@ logging.basicConfig(
         
 
 def mqtt_tx(client,s_value):
-
+    logging.info("__mqtt_tx")
     mqtt_topic_prefix = parser.get('mqtt_broker','mqtt_topic_prefix')
     mqtt_ip = parser.get('mqtt_broker','mqtt_ip')
     mqtt_login = parser.get('mqtt_broker','mqtt_login')
@@ -57,7 +56,6 @@ def mqtt_tx(client,s_value):
     logging.info( mqtt_ip + " -> " + mqtt_topic_prefix + "/"  + client + "  " + str(s_value))
 
 def pedir_nuevo_key():
-
     huawei_login = parser.get('huawei_server','huawei_login')
     huawei_password = parser.get('huawei_server','huawei_password')
     urlOpenApiHuawei_login = "https://intl.fusionsolar.huawei.com/thirdData/login"
@@ -76,7 +74,7 @@ def pedir_nuevo_key():
     logging.debug(requestResponse)
     global HToken
     HToken = requestResponse.cookies.get("XSRF-TOKEN")
-    logging.debug("XSRF-TOKEN:")
+    logging.info("XSRF-TOKEN:")
     logging.debug(type(HToken))
     logging.info(HToken)
 
@@ -84,7 +82,10 @@ def nedNewKey():
     global lastTimeKey
     needed = False
     current = datetime.now()
-    treinta = timedelta(minutes = 12)
+    # El bucle de consultas es cada 5 min
+    # Peticion de key a los 25 minutos (consulta pasados los 22)
+    # La consulta de la energia será a la siguiente (a los 30 min)
+    treinta = timedelta(minutes = 22)
     logging.debug("__nedNewKey ?")
     logging.debug(str(current))
     logging.debug(str(lastTimeKey + treinta))
@@ -96,7 +97,6 @@ def nedNewKey():
     logging.debug(needed)
     return needed
         
-
 def serverReading(tm):
     threading.Timer(tm, serverReading,args=[tm]).start()
     logging.debug("_" * 2 + ' serverReading')
@@ -122,8 +122,7 @@ def serverReading(tm):
         logging.debug(json_req_body);
 
     
-        ''' Componemos y ejecutamos la peticion '''
-        
+        # La consulta al servidor       
         requestResponse = requests.post(urlOpenApiHuawei_getDevRealKpi, data = json_req_body, headers=headers);
         requestResponseStatus = requestResponse.status_code
         #logging.debug("Codigo respuesta: ",requestResponseStatus);
@@ -136,7 +135,6 @@ def serverReading(tm):
             mqtt_tx(inversorName,r_value)
 
     except Exception as ex:
-
         logging.info ("ERROR: LA EJECUCION NO HA TERMINADO CORRECTAMENTE DEBIDO A UN ERROR");
         logging.info (ex);
 

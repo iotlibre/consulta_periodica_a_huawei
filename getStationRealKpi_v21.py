@@ -1,21 +1,18 @@
 '''
 Version:
-v2
-mar 05 sep 2023 07:36:47 CEST
-Request cada 5 min
-Funciona pidiendo un nuevo key despues de cada request
-
+mie 30 ago 2023 18:00:50 CEST
 
 = Enviar datos a nodeRed 
 = consulta cada 5 min
-= Incluir logs
-= Es necesario pedir un nuevo key?
+=> Incluir logs
+=> Es necesario pedir un nuevo key?
 => Asegurarse de que la consulta tiene el formato adecuado
 => Leer varias estaciones Huawei del .ini
 
 '''
 
 import sys
+from datetime import datetime
 import time
 import requests;
 import json;
@@ -30,7 +27,6 @@ from datetime import timedelta
 
 
 HToken = ""
-lastTimeKey = datetime.now()
 
 ''' Niveles de logging
 Para obtener _TODO_ el detalle: level=logging.INFO
@@ -83,22 +79,6 @@ def pedir_nuevo_key():
     logging.debug(type(HToken))
     logging.debug(HToken)
 
-def nedNewKey():
-    global lastTimeKey
-    needed = False
-    current = datetime.now()
-    treinta = timedelta(minutes = 12)
-    logging.debug("nedNewKey ?")
-    logging.debug(str(current))
-    logging.debug(str(lastTimeKey + treinta))
-   
-    if (current > (lastTimeKey + treinta)):
-        needed = True
-        lastTimeKey = current
-
-    logging.debug(needed)
-    return needed
-        
 
 # 
 parser = configparser.ConfigParser()
@@ -135,6 +115,7 @@ def serverReading(tm):
     logging.debug("json_req_body:");
     logging.debug(json_req_body);
 
+
     try:
         ''' Componemos y ejecutamos la peticion '''
         
@@ -152,9 +133,6 @@ def serverReading(tm):
 
         logging.info ("ERROR: LA EJECUCION NO HA TERMINADO CORRECTAMENTE DEBIDO A UN ERROR");
         logging.info (ex);
-
-    if nedNewKey():
-        pedir_nuevo_key()
 
 serverReading(300.0)
 
