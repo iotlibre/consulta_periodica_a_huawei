@@ -1,6 +1,8 @@
 '''
 Version:
-mie 06 sep 2023 11:15:02 CEST
+jue 07 sep 2023 09:38:12 CEST
+V5
+Consulta a varios inversores
 v4
 Consulta con key nuevo cada 30 minutos
 Probado con credenciales erroneas
@@ -8,13 +10,12 @@ v2
 Request cada 5 min
 Funciona pidiendo un nuevo key despues de cada request
 
-
 = Enviar datos a nodeRed 
 = consulta cada 5 min
 = Incluir logs
 = Es necesario pedir un nuevo key?
 = Asegurarse de que la consulta tiene el formato adecuado
-=> Leer varias estaciones Huawei del .ini
+= Leer varias estaciones Huawei del .ini
 
 '''
 
@@ -106,6 +107,7 @@ def serverReading(tm):
 
     ''' Construimos los componentes de la peticion '''
     param_stationCodes = parser.get('huawei_inversor','stationCodes')
+    # borrar si funciona 
     inversorName = parser.get('huawei_inversor','name')
 
     try:
@@ -130,9 +132,16 @@ def serverReading(tm):
             responseJson = json.loads(requestResponse.text)
             logging.debug("responseJson:")
             logging.debug(responseJson)
-            r_value = responseJson['data'][0]["dataItemMap"]['total_power'] # received value
-            logging.info('totalEnergy: ' + str(r_value))
-            mqtt_tx(inversorName,r_value)
+            r_list = responseJson['data']
+            logging.debug("type r_list:")
+            logging.debug(type(r_list))
+            for r_station in r_list:
+                logging.info(r_station)
+                r_name = r_station["stationCode"] # received name
+                r_value = r_station["dataItemMap"]['total_power'] # received value
+                logging.info('stationCode: ' + str(r_name))
+                logging.info('totalEnergy: ' + str(r_value))
+                mqtt_tx(r_name,r_value)
 
     except Exception as ex:
         logging.info ("ERROR: LA EJECUCION NO HA TERMINADO CORRECTAMENTE DEBIDO A UN ERROR");
