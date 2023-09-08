@@ -1,8 +1,8 @@
 '''
 Version:
-vie 08 sep 2023 06:52:00 CEST
+vie 08 sep 2023 10:06:18 CEST
 V6
-url consulta en .ini
+url de consulta en .ini
 + robusto
 V5
 Consulta a varios inversores
@@ -83,7 +83,11 @@ def pedir_nuevo_key():
     logging.debug("__Respuesta de la peticion XSRF-TOKEN:")
     logging.debug(requestResponse)
     global HToken
-    HToken = requestResponse.cookies.get("XSRF-TOKEN")
+    HToken0 = requestResponse.cookies.get("XSRF-TOKEN")
+    if(type(HToken0) == type("cadena")):
+        if(len(HToken0)>100):
+            HToken = HToken0
+
     logging.info("XSRF-TOKEN:")
     logging.debug(type(HToken))
     logging.info(HToken)
@@ -154,7 +158,7 @@ def serverReading(tm):
                 mqtt_tx(r_name,r_value)
 
     except Exception as ex:
-        logging.info ("ERROR: LA EJECUCION NO HA TERMINADO CORRECTAMENTE DEBIDO A UN ERROR");
+        logging.info ("ERROR: LA EJECUCION NO HA TERMINADO CORRECTAMENTE");
         logging.info (ex);
 
     if need_new_key():
