@@ -99,7 +99,7 @@ def need_new_key():
     # El bucle de consultas es cada 5 min
     # Peticion de key a los 25 minutos (consulta pasados los 22)
     # La consulta de la energia será a la siguiente (a los 30 min)
-    treinta = timedelta(minutes = 12)
+    treinta = timedelta(minutes = 8)
     logging.debug("__need_new_key ?")
     logging.debug(str(current))
     logging.debug(str(last_time_key + treinta))
